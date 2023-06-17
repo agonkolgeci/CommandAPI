@@ -42,6 +42,8 @@ import dev.jorel.commandapi.arguments.LiteralArgument;
 import dev.jorel.commandapi.arguments.MultiLiteralArgument;
 import dev.jorel.commandapi.arguments.SuggestionProviders;
 import dev.jorel.commandapi.exceptions.WrapperCommandSyntaxException;
+import dev.jorel.commandapi.network.BukkitCommandAPIMessenger;
+import dev.jorel.commandapi.network.CommandAPIProtocol;
 import dev.jorel.commandapi.nms.NMS;
 import dev.jorel.commandapi.preprocessor.RequireField;
 import dev.jorel.commandapi.preprocessor.Unimplemented;
@@ -739,6 +741,11 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 		String[] split = key.split(":");
 		if(split.length < 2) return false;
 		return split[1].equalsIgnoreCase(commandName);
+	}
+
+	@Override
+	public BukkitCommandAPIMessenger setupMessenger() {
+		return new BukkitCommandAPIMessenger(CommandAPIProtocol.CHANNEL_NAME, getConfiguration().getPlugin());
 	}
 
 	@Override
