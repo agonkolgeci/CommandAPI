@@ -43,7 +43,6 @@ import dev.jorel.commandapi.arguments.MultiLiteralArgument;
 import dev.jorel.commandapi.arguments.SuggestionProviders;
 import dev.jorel.commandapi.exceptions.WrapperCommandSyntaxException;
 import dev.jorel.commandapi.network.BukkitCommandAPIMessenger;
-import dev.jorel.commandapi.network.CommandAPIProtocol;
 import dev.jorel.commandapi.nms.NMS;
 import dev.jorel.commandapi.preprocessor.RequireField;
 import dev.jorel.commandapi.preprocessor.Unimplemented;
@@ -746,7 +745,7 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 
 	@Override
 	public BukkitCommandAPIMessenger setupMessenger() {
-		messenger = new BukkitCommandAPIMessenger(CommandAPIProtocol.CHANNEL_NAME, getConfiguration().getPlugin());
+		messenger = new BukkitCommandAPIMessenger(getConfiguration().getPlugin());
 		return messenger;
 	}
 
