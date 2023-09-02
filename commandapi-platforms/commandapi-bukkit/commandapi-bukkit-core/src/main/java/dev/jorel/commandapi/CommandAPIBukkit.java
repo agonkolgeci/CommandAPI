@@ -29,7 +29,6 @@ import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
@@ -63,9 +62,12 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	private static InternalBukkitConfig config;
 	private PaperImplementations paper;
 
-	// Namespaces
+	// We need to fix permissions and namespaces on Bukkit 
+	//  Bukkit does a bunch of mucking about moving nodes between Brigadier CommandDispatchers and its own CommandMap,
+	//  and these variables help us set that all straight
 	private final Set<String> namespacesToFix = new HashSet<>();
 	private RootCommandNode<Source> minecraftCommandNamespaces = new RootCommandNode<>();
+	private final TreeMap<String, CommandPermission> permissionsToFix = new TreeMap<>();
 
 	// Static VarHandles
 	// I'd like to make the Maps here `Map<String, CommandNode<Source>>`, but these static fields cannot use the type
@@ -219,12 +221,11 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	 * Makes permission checks more "Bukkit" like and less "Vanilla Minecraft" like
 	 */
 	private void fixPermissions() {
-		// Get the command map to find registered commands
-		CommandMap map = paper.getCommandMap();
-		final Map<String, CommandPermission> permissionsToFix = CommandAPIHandler.getInstance().registeredPermissions;
-
 		if (!permissionsToFix.isEmpty()) {
 			CommandAPI.logInfo("Linking permissions to commands:");
+
+			// Get the command map to find registered commands
+			CommandMap map = paper.getCommandMap();
 
 			for (Map.Entry<String, CommandPermission> entry : permissionsToFix.entrySet()) {
 				String cmdName = entry.getKey();
@@ -462,15 +463,6 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	}
 
 	@Override
-	public void registerPermission(String string) {
-		try {
-			Bukkit.getPluginManager().addPermission(new Permission(string));
-		} catch (IllegalArgumentException e) {
-			assert true; // nop, not an error.
-		}
-	}
-
-	@Override
 	@Unimplemented(because = REQUIRES_MINECRAFT_SERVER)
 	public abstract SuggestionProvider<Source> getSuggestionProvider(SuggestionProviders suggestionProvider);
 
@@ -495,7 +487,23 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	}
 
 	@Override
-	public void postCommandRegistration(RegisteredCommand registeredCommand, LiteralCommandNode<Source> resultantNode, List<LiteralCommandNode<Source>> aliasNodes) {
+	public void postCommandRegistration(List<RegisteredCommand> registeredCommands, LiteralCommandNode<Source> resultantNode, List<LiteralCommandNode<Source>> aliasNodes) {
+		// Using registeredCommands.get(0) as representation for most command features.
+		//  This is fine, because the only difference between the commands in the list is their argument strings.
+		RegisteredCommand commonCommandInformation = registeredCommands.get(0);
+		
+		// Register the command's permission node to Bukkit's manager, if it exists
+		CommandPermission permission = commonCommandInformation.permission();
+		Optional<String> wrappedPermissionString = permission.getPermission();
+		if(wrappedPermissionString.isPresent()) {
+			try {
+				Bukkit.getPluginManager().addPermission(new Permission(wrappedPermissionString.get()));
+			} catch (IllegalArgumentException ignored) {
+				// Exception is thrown if we attempt to register a permission that already exists
+				//  If it already exists, that's totally fine, so just ignore the exception
+			}
+		}
+
 		if(!CommandAPI.canRegister()) {
 			// Usually, when registering commands during server startup, we can just put our commands into the
 			// `net.minecraft.server.MinecraftServer#vanillaCommandDispatcher` and leave it. As the server finishes setup,
@@ -509,8 +517,8 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 			RootCommandNode<Source> root = getResourcesDispatcher().getRoot();
 
 			String name = resultantNode.getLiteral();
-			String namespace = registeredCommand.namespace();
-			String permNode = unpackInternalPermissionNodeString(registeredCommand.permission());
+			String namespace = commonCommandInformation.namespace();
+			String permNode = unpackInternalPermissionNodeString(permission);
 
 			registerCommand(knownCommands, root, name, permNode, namespace, resultantNode);
 
@@ -537,12 +545,21 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 			}
 
 			// Adding the command to the help map usually happens in `CommandAPIBukkit#onEnable`
-			updateHelpForCommands(List.of(registeredCommand));
+			updateHelpForCommands(registeredCommands);
 
 			// Sending command dispatcher packets usually happens when Players join the server
 			for(Player p: Bukkit.getOnlinePlayers()) {
 				p.updateCommands();
 			}
+		} else {
+			// Since the VanillaCommandWrappers aren't created yet, we need to remember to fix those permissions once the server is enabled
+			//  We'll just give the wrappers the first permission associated with this command
+			String commandName = commonCommandInformation.commandName().toLowerCase();
+			permissionsToFix.putIfAbsent(commandName, permission);
+
+			// Do the same for the namespaced version of the command
+			String namespace = commonCommandInformation.namespace().toLowerCase();
+			if(!namespace.isEmpty()) permissionsToFix.putIfAbsent(namespace + ":" + commandName, permission);
 		}
 	}
 
@@ -559,7 +576,7 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 		root.addChild(resultantNode);
 
 		// Handle namespace
-		LiteralCommandNode<Source> namespacedNode = CommandAPIHandler.getInstance().namespaceNode(resultantNode, namespace);
+		LiteralCommandNode<Source> namespacedNode = CommandAPIHandler.<Argument<?>, CommandSender, Source>getInstance().namespaceNode(resultantNode, namespace);
 		if (namespace.equals("minecraft")) {
 			// The minecraft namespace version should be registered as a straight alias of the original command, since
 			//  the `minecraft:name` node does not exist in the Brigadier dispatcher, which is referenced by
@@ -578,10 +595,11 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	}
 
 	@Override
-	public LiteralCommandNode<Source> registerCommandNode(LiteralArgumentBuilder<Source> node, String namespace) {
+	public void registerCommandNode(LiteralCommandNode<Source> node, String namespace) {
+		CommandAPIHandler<Argument<?>, CommandSender, Source> handler = CommandAPIHandler.getInstance();
+
 		RootCommandNode<Source> rootNode = getBrigadierDispatcher().getRoot();
 
-		LiteralCommandNode<Source> builtNode = node.build();
 		String name = node.getLiteral();
 		if (namespace.equals("minecraft")) {
 			if (namespacesToFix.contains("minecraft:" + name)) {
@@ -589,7 +607,7 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 				// However, another command has requested that `minecraft:name` be removed
 				// We'll keep track of everything that should be `minecraft:name` in
 				//  `minecraftCommandNamespaces` and fix this later in `#fixNamespaces`
-				minecraftCommandNamespaces.addChild(CommandAPIHandler.getInstance().namespaceNode(builtNode, "minecraft"));
+				minecraftCommandNamespaces.addChild(handler.namespaceNode(node, "minecraft"));
 			}
 		} else {
 			// Make sure to remove the `minecraft:name` and
@@ -597,15 +615,13 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 			fillNamespacesToFix(name, namespace + ":" + name);
 
 			// Create the namespaced node
-			rootNode.addChild(CommandAPIHandler.getInstance().namespaceNode(builtNode, namespace));
+			rootNode.addChild(handler.namespaceNode(node, namespace));
 		}
 
 		// Add the main node to dispatcher
 		//  We needed to wait until after `fillNamespacesToFix` was called to do this, in case a previous 
 		//  `minecraft:name` version of the command needed to be saved separately before this node was added
-		rootNode.addChild(builtNode);
-		
-		return builtNode;
+		rootNode.addChild(node);
 	}
 
 	private void fillNamespacesToFix(String... namespacedCommands) {
@@ -623,7 +639,9 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 				// We'll keep track of everything that should be `minecraft:command` in
 				//  `minecraftCommandNamespaces` and fix this later in `#fixNamespaces`
 				// TODO: Ideally, we should be working without this cast to LiteralCommandNode. I don't know if this can fail
-				minecraftCommandNamespaces.addChild(CommandAPIHandler.getInstance().namespaceNode((LiteralCommandNode<Source>) currentNode, "minecraft"));
+				minecraftCommandNamespaces.addChild(
+					CommandAPIHandler.<Argument<?>, CommandSender, Source>getInstance().namespaceNode((LiteralCommandNode<Source>) currentNode, "minecraft")
+				);
 			}
 		}
 	}
@@ -789,11 +807,6 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 		return new LiteralArgument(nodeName, literal);
 	}
 
-	@Override
-	public CommandAPICommand newConcreteCommandAPICommand(CommandMetaData<CommandSender> meta) {
-		return new CommandAPICommand(meta);
-	}
-
 	/**
 	 * Forces a command to return a success value of 0
 	 *
@@ -835,7 +848,7 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	public static <T> void initializeNBTAPI(Class<T> nbtContainerClass, Function<Object, T> nbtContainerConstructor) {
 		getConfiguration().lateInitializeNBT(nbtContainerClass, nbtContainerConstructor);
 	}
-	
+
 	protected void registerBukkitRecipesSafely(Iterator<Recipe> recipes) {
 		Recipe recipe;
 		while (recipes.hasNext()) {
