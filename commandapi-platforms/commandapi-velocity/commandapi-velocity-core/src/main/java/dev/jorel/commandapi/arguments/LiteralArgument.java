@@ -145,7 +145,7 @@ public class LiteralArgument extends Argument<String> implements Literal<Argumen
 
 	@Override
 	public void checkPreconditions(List<Argument<?>> previousArguments, List<String> previousNonLiteralArgumentNames) {
-		super.checkPreconditions(previousArguments, previousNonLiteralArgumentNames);
+		Literal.super.checkPreconditions(previousArguments, previousNonLiteralArgumentNames);
 	}
 
 	@Override
