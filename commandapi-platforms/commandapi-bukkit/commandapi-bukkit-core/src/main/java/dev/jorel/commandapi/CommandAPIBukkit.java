@@ -1,19 +1,24 @@
 package dev.jorel.commandapi;
 
-import static dev.jorel.commandapi.preprocessor.Unimplemented.REASON.REQUIRES_CRAFTBUKKIT;
-import static dev.jorel.commandapi.preprocessor.Unimplemented.REASON.REQUIRES_CSS;
-import static dev.jorel.commandapi.preprocessor.Unimplemented.REASON.REQUIRES_MINECRAFT_SERVER;
-import static dev.jorel.commandapi.preprocessor.Unimplemented.REASON.VERSION_SPECIFIC_IMPLEMENTATION;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.mojang.brigadier.tree.CommandNode;
+import com.mojang.brigadier.tree.LiteralCommandNode;
+import com.mojang.brigadier.tree.RootCommandNode;
+import dev.jorel.commandapi.arguments.Argument;
+import dev.jorel.commandapi.arguments.LiteralArgument;
+import dev.jorel.commandapi.arguments.MultiLiteralArgument;
+import dev.jorel.commandapi.arguments.SuggestionProviders;
 import dev.jorel.commandapi.commandsenders.*;
+import dev.jorel.commandapi.exceptions.WrapperCommandSyntaxException;
+import dev.jorel.commandapi.nms.NMS;
+import dev.jorel.commandapi.preprocessor.RequireField;
+import dev.jorel.commandapi.preprocessor.Unimplemented;
+import dev.jorel.commandapi.wrappers.NativeProxyCommandSender;
+import net.kyori.adventure.text.Component;
+import net.md_5.bungee.api.chat.BaseComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Keyed;
@@ -28,33 +33,21 @@ import org.bukkit.inventory.Recipe;
 import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.suggestion.SuggestionProvider;
-import com.mojang.brigadier.tree.CommandNode;
-import com.mojang.brigadier.tree.LiteralCommandNode;
-import com.mojang.brigadier.tree.RootCommandNode;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import dev.jorel.commandapi.arguments.Argument;
-import dev.jorel.commandapi.arguments.LiteralArgument;
-import dev.jorel.commandapi.arguments.MultiLiteralArgument;
-import dev.jorel.commandapi.arguments.SuggestionProviders;
-import dev.jorel.commandapi.exceptions.WrapperCommandSyntaxException;
-import dev.jorel.commandapi.nms.NMS;
-import dev.jorel.commandapi.preprocessor.RequireField;
-import dev.jorel.commandapi.preprocessor.Unimplemented;
-import dev.jorel.commandapi.wrappers.NativeProxyCommandSender;
-import net.kyori.adventure.text.Component;
-import net.md_5.bungee.api.chat.BaseComponent;
+import static dev.jorel.commandapi.preprocessor.Unimplemented.REASON.*;
 
 // CommandAPIBukkit is an CommandAPIPlatform, but also needs all of the methods from
 // NMS, so it implements NMS. Our implementation of CommandAPIBukkit is now derived
 // using the version handler (and thus, deferred to our NMS-specific implementations)
 
-@RequireField(in = CommandNode.class, name = "children", ofType = Map.class)
-@RequireField(in = CommandNode.class, name = "literals", ofType = Map.class)
-@RequireField(in = CommandNode.class, name = "arguments", ofType = Map.class)
+@RequireField(in = SimpleCommandMap.class, name = "knownCommands", ofType = Map.class)
 public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Argument<?>, CommandSender, Source>, NMS<Source> {
 
 	// References to utility classes
@@ -70,18 +63,10 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	private final TreeMap<String, CommandPermission> permissionsToFix = new TreeMap<>();
 
 	// Static VarHandles
-	// I'd like to make the Maps here `Map<String, CommandNode<Source>>`, but these static fields cannot use the type
-	//  parameter Source. We still need to cast to that signature for map, so Map is raw.
-	private static final SafeVarHandle<CommandNode<?>, Map> commandNodeChildren;
-	private static final SafeVarHandle<CommandNode<?>, Map> commandNodeLiterals;
-	private static final SafeVarHandle<CommandNode<?>, Map> commandNodeArguments;
 	private static final SafeVarHandle<SimpleCommandMap, Map<String, Command>> commandMapKnownCommands;
 
 	// Compute all var handles all in one go so we don't do this during main server runtime
 	static {
-		commandNodeChildren = SafeVarHandle.ofOrNull(CommandNode.class, "children", "children", Map.class);
-		commandNodeLiterals = SafeVarHandle.ofOrNull(CommandNode.class, "literals", "literals", Map.class);
-		commandNodeArguments = SafeVarHandle.ofOrNull(CommandNode.class, "arguments", "arguments", Map.class);
 		commandMapKnownCommands = SafeVarHandle.ofOrNull(SimpleCommandMap.class, "knownCommands", "knownCommands", Map.class);
 	}
 
@@ -720,10 +705,10 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 
 	private void removeBrigadierCommands(CommandDispatcher<Source> dispatcher, String commandName,
 										 boolean unregisterNamespaces, Predicate<CommandNode<Source>> extraCheck) {
-		RootCommandNode<?> root = dispatcher.getRoot();
-		Map<String, CommandNode<Source>> children = (Map<String, CommandNode<Source>>) commandNodeChildren.get(root);
-		Map<String, CommandNode<Source>> literals = (Map<String, CommandNode<Source>>) commandNodeLiterals.get(root);
-		Map<String, CommandNode<Source>> arguments = (Map<String, CommandNode<Source>>) commandNodeArguments.get(root);
+		RootCommandNode<Source> root = dispatcher.getRoot();
+		Map<String, ? extends CommandNode<Source>> children = CommandAPIHandler.getCommandNodeChildren(root);
+		Map<String, ? extends CommandNode<Source>> literals = CommandAPIHandler.getCommandNodeLiterals(root);
+		Map<String, ? extends CommandNode<Source>> arguments = CommandAPIHandler.getCommandNodeArguments(root);
 
 		removeCommandFromMapIfCheckPasses(children, commandName, extraCheck);
 		removeCommandFromMapIfCheckPasses(literals, commandName, extraCheck);
@@ -738,18 +723,17 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 		}
 	}
 
-	private static <T> void removeCommandNamespace(Map<String, T> map, String commandName, Predicate<T> extraCheck) {
+	private static <T> void removeCommandNamespace(Map<String, ? extends T> map, String commandName, Predicate<T> extraCheck) {
 		for (String key : new HashSet<>(map.keySet())) {
 			if (!isThisTheCommandButNamespaced(commandName, key)) continue;
-
 			removeCommandFromMapIfCheckPasses(map, key, extraCheck);
 		}
 	}
 
-	private static <T> void removeCommandFromMapIfCheckPasses(Map<String, T> map, String key, Predicate<T> extraCheck) {
+	private static <T> void removeCommandFromMapIfCheckPasses(Map<String, ? extends T> map, String key, Predicate<T> extraCheck) {
 		T element = map.get(key);
 		if (element == null) return;
-		if (extraCheck.test(map.get(key))) map.remove(key);
+		if (extraCheck.test(element)) map.remove(key);
 	}
 
 	private static boolean isThisTheCommandButNamespaced(String commandName, String key) {
