@@ -49,18 +49,19 @@ import dev.jorel.commandapi.wrappers.NativeProxyCommandSender;
 import net.kyori.adventure.text.Component;
 import net.md_5.bungee.api.chat.BaseComponent;
 
-// CommandAPIBukkit is an CommandAPIPlatform, but also needs all of the methods from
-// NMS, so it implements NMS. Our implementation of CommandAPIBukkit is now derived
+// CommandAPIBukkit needs all of the methods fromNMS, so it implements NMS.
+// Our implementation of CommandAPIBukkit is now derived
 // using the version handler (and thus, deferred to our NMS-specific implementations)
 
 @RequireField(in = CommandNode.class, name = "children", ofType = Map.class)
 @RequireField(in = CommandNode.class, name = "literals", ofType = Map.class)
 @RequireField(in = CommandNode.class, name = "arguments", ofType = Map.class)
-public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Argument<?>, CommandSender, Source>, NMS<Source> {
+public abstract class CommandAPIBukkit<Source> implements NMS<Source> {
 
 	// References to utility classes
 	private static CommandAPIBukkit<?> instance;
 	private static InternalBukkitConfig config;
+	// TODO: Remove because we want to get rid of PaperImplementations.java
 	private PaperImplementations paper;
 
 	// Namespaces
@@ -96,6 +97,7 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 		}
 	}
 
+	// TODO: Remove because we want to get rid of PaperImplementations.java
 	public PaperImplementations getPaper() {
 		return paper;
 	}
@@ -108,7 +110,6 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 		}
 	}
 
-	@Override
 	public void onLoad(CommandAPIConfig<?> config) {
 		if(config instanceof CommandAPIBukkitConfig bukkitConfig) {
 			// A little unconventional, but we really don't need to implement mojang mapping flags
@@ -132,6 +133,7 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 		CommandAPIBukkit.config = internalBukkitConfig;
 	}
 
+	// TODO: Simplify because we want to get rid of PaperImplementations.java
 	private void checkDependencies() {
 		// Log successful hooks
 		Class<?> nbtContainerClass = CommandAPI.getConfiguration().getNBTContainerClass();
@@ -185,7 +187,7 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 		paper = new PaperImplementations(isPaperPresent, isFoliaPresent, this);
 	}
 
-	@Override
+	// TODO: Platform-specific because we want to get rid of PaperImplementations.java
 	public void onEnable() {
 		JavaPlugin plugin = config.getPlugin();
 
@@ -218,6 +220,7 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	/*
 	 * Makes permission checks more "Bukkit" like and less "Vanilla Minecraft" like
 	 */
+	// TODO: Platform-specific because we want to get rid if PaperImplementations.java
 	private void fixPermissions() {
 		// Get the command map to find registered commands
 		CommandMap map = paper.getCommandMap();
@@ -417,18 +420,16 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 		// Nothing to do
 	}
 
-	@Override
 	@Unimplemented(because = REQUIRES_CSS)
 	public abstract BukkitCommandSender<? extends CommandSender> getSenderForCommand(CommandContext<Source> cmdCtx, boolean forceNative);
 
-	@Override
 	@Unimplemented(because = REQUIRES_CSS)
 	public abstract BukkitCommandSender<? extends CommandSender> getCommandSenderFromCommandSource(Source cs);
 
-	@Override
 	@Unimplemented(because = REQUIRES_CRAFTBUKKIT)
 	public abstract Source getBrigadierSourceFromCommandSender(AbstractCommandSender<? extends CommandSender> sender);
 
+	// TODO: Platform-specific because we want to get rid of PaperImplementations.java
 	public BukkitCommandSender<? extends CommandSender> wrapCommandSender(CommandSender sender) {
 		if (sender instanceof BlockCommandSender block) {
 			return new BukkitBlockCommandSender(block);
@@ -461,7 +462,6 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 		throw new RuntimeException("Failed to wrap CommandSender " + sender + " to a CommandAPI-compatible BukkitCommandSender");
 	}
 
-	@Override
 	public void registerPermission(String string) {
 		try {
 			Bukkit.getPluginManager().addPermission(new Permission(string));
@@ -474,7 +474,6 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	@Unimplemented(because = REQUIRES_MINECRAFT_SERVER)
 	public abstract SuggestionProvider<Source> getSuggestionProvider(SuggestionProviders suggestionProvider);
 
-	@Override
 	public void preCommandRegistration(String commandName) {
 		// Warn if the command we're registering already exists in this plugin's
 		// plugin.yml file
@@ -494,7 +493,7 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 		}
 	}
 
-	@Override
+	// TODO: Platform-specific because we want to get rid of PaperImplementations.java
 	public void postCommandRegistration(RegisteredCommand registeredCommand, LiteralCommandNode<Source> resultantNode, List<LiteralCommandNode<Source>> aliasNodes) {
 		if(!CommandAPI.canRegister()) {
 			// Usually, when registering commands during server startup, we can just put our commands into the
@@ -628,7 +627,6 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 		}
 	}
 
-	@Override
 	public void unregister(String commandName, boolean unregisterNamespaces) {
 		unregisterInternal(commandName, unregisterNamespaces, false);
 	}
@@ -745,14 +743,12 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	@Unimplemented(because = REQUIRES_MINECRAFT_SERVER)
 	public abstract CommandDispatcher<Source> getBrigadierDispatcher();
 
-	@Override
 	@Unimplemented(because = {REQUIRES_MINECRAFT_SERVER, VERSION_SPECIFIC_IMPLEMENTATION})
 	public abstract void createDispatcherFile(File file, CommandDispatcher<Source> brigadierDispatcher) throws IOException;
 	
 	@Unimplemented(because = REQUIRES_MINECRAFT_SERVER) // What are the odds?
 	public abstract <T> T getMinecraftServer();
 
-	@Override
 	public CommandAPILogger getLogger() {
 		return new DefaultLogger();
 	}
@@ -774,22 +770,18 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	@Unimplemented(because = VERSION_SPECIFIC_IMPLEMENTATION)
 	public abstract void reloadDataPacks();
 
-	@Override
 	public void updateRequirements(AbstractPlayer<?> player) {
 		((Player) player.getSource()).updateCommands();
 	}
 
-	@Override
 	public Argument<String> newConcreteMultiLiteralArgument(String nodeName, String[] literals) {
 		return new MultiLiteralArgument(nodeName, literals);
 	}
 
-	@Override
 	public Argument<String> newConcreteLiteralArgument(String nodeName, String literal) {
 		return new LiteralArgument(nodeName, literal);
 	}
 
-	@Override
 	public CommandAPICommand newConcreteCommandAPICommand(CommandMetaData<CommandSender> meta) {
 		return new CommandAPICommand(meta);
 	}
