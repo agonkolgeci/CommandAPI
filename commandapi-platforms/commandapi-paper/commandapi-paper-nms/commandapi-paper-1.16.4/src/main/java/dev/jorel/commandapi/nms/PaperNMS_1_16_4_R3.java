@@ -2,7 +2,6 @@ package dev.jorel.commandapi.nms;
 
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import dev.jorel.commandapi.CommandAPIBukkit;
 import dev.jorel.commandapi.preprocessor.NMSMeta;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -14,7 +13,7 @@ import net.minecraft.server.v1_16_R3.CommandListenerWrapper;
 import net.minecraft.server.v1_16_R3.IChatBaseComponent;
 
 @NMSMeta(compatibleWith = "1.16.4")
-public class PaperNMS_1_16_4_R3 extends NMSWrapper_1_16_4_R3 {
+public class PaperNMS_1_16_4_R3 extends PaperNMSWrapper_1_16_4_R3 {
 
 	@Override
 	public Component getChat(CommandContext<CommandListenerWrapper> cmdCtx, String key) throws CommandSyntaxException {

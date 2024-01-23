@@ -2,7 +2,6 @@ package dev.jorel.commandapi.nms;
 
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import dev.jorel.commandapi.CommandAPIBukkit;
 import dev.jorel.commandapi.SafeVarHandle;
 import dev.jorel.commandapi.preprocessor.NMSMeta;
 import dev.jorel.commandapi.preprocessor.RequireField;
@@ -18,7 +17,7 @@ import net.minecraft.server.v1_15_R1.IChatBaseComponent;
 
 @NMSMeta(compatibleWith = { "1.15", "1.15.1", "1.15.2" })
 @RequireField(in = EnumChatFormat.class, name = "D", ofType = Integer.class)
-public class PaperNMS_1_15 extends NMSWrapper_1_15 {
+public class PaperNMS_1_15 extends PaperNMSWrapper_1_15 {
 
 	private static final SafeVarHandle<EnumChatFormat, Integer> enumChatFormatD;
 
@@ -45,6 +44,6 @@ public class PaperNMS_1_15 extends NMSWrapper_1_15 {
 	@SuppressWarnings("unchecked")
 	@Override
 	public NMS<?> bukkitNMS() {
-		return (NMS<?>) new NMS_1_15();
+		return new NMS_1_15();
 	}
 }
