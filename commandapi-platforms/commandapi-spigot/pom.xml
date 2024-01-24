@@ -13,6 +13,7 @@
 	<packaging>pom</packaging>
 
 	<modules>
+        <module>commandapi-spigot-annotations</module>
 		<module>commandapi-spigot-core</module>
 		<module>commandapi-spigot-nms</module>
         <module>commandapi-spigot-vh</module>
@@ -20,6 +21,6 @@
 		<module>commandapi-spigot-shade</module>
 		<module>commandapi-spigot-plugin-mojang-mapped</module>
 		<module>commandapi-spigot-shade-mojang-mapped</module>
-	</modules>
+    </modules>
 
 </project>
