@@ -12,4 +12,6 @@ public interface BukkitPlatform<Source> extends CommandAPIPlatform<Argument<?>, 
 	@Override
 	BukkitCommandSender<? extends CommandSender> wrapCommandSender(CommandSender sender);
 
+	Platform activePlatform();
+
 }

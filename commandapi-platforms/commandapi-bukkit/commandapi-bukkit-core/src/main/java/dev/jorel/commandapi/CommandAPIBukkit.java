@@ -19,14 +19,9 @@ import org.bukkit.ChatColor;
 import org.bukkit.Keyed;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
-import org.bukkit.event.server.ServerLoadEvent;
 import org.bukkit.help.HelpTopic;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.permissions.Permission;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -45,7 +40,6 @@ import dev.jorel.commandapi.exceptions.WrapperCommandSyntaxException;
 import dev.jorel.commandapi.nms.NMS;
 import dev.jorel.commandapi.preprocessor.RequireField;
 import dev.jorel.commandapi.preprocessor.Unimplemented;
-import dev.jorel.commandapi.wrappers.NativeProxyCommandSender;
 import net.kyori.adventure.text.Component;
 import net.md_5.bungee.api.chat.BaseComponent;
 
@@ -100,7 +94,7 @@ public abstract class CommandAPIBukkit<Source> implements NMS<Source> {
 	}
 
 	@SuppressWarnings("unchecked")
-	public static <T extends CommandAPIPlatform<?, ?, ?>> T getInstance() {
+	public static <T extends BukkitPlatform<?>> T platform() {
 		if (CommandAPIBukkit.instance != null) {
 			return (T) instance;
 		}

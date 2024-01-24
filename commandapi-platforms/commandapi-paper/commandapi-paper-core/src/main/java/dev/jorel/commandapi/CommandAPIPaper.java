@@ -37,6 +37,7 @@ public abstract class CommandAPIPaper<Source> implements BukkitPlatform<Source>,
 	private boolean isFoliaPresent = false;
 	private final Class<? extends CommandSender> feedbackForwardingCommandSender;
 
+	@SuppressWarnings("unchecked")
 	protected CommandAPIPaper() {
 		CommandAPIPaper.bukkit = ((CommandAPIBukkit<?>) bukkitNMS());
 		CommandAPIPaper.paper = this;
@@ -155,6 +156,11 @@ public abstract class CommandAPIPaper<Source> implements BukkitPlatform<Source>,
 
 	public CommandMap getCommandMap() {
 		return Bukkit.getCommandMap();
+	}
+
+	@Override
+	public Platform activePlatform() {
+		return Platform.PAPER;
 	}
 
 	@SuppressWarnings("unchecked")
