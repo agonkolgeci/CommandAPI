@@ -5,16 +5,30 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.LiteralArgument;
 import dev.jorel.commandapi.arguments.MultiLiteralArgument;
 import dev.jorel.commandapi.arguments.SuggestionProviders;
-import dev.jorel.commandapi.commandsenders.*;
+import dev.jorel.commandapi.commandsenders.AbstractCommandSender;
+import dev.jorel.commandapi.commandsenders.AbstractPlayer;
+import dev.jorel.commandapi.commandsenders.BukkitBlockCommandSender;
+import dev.jorel.commandapi.commandsenders.BukkitCommandSender;
+import dev.jorel.commandapi.commandsenders.BukkitConsoleCommandSender;
+import dev.jorel.commandapi.commandsenders.BukkitEntity;
+import dev.jorel.commandapi.commandsenders.BukkitFeedbackForwardingCommandSender;
+import dev.jorel.commandapi.commandsenders.BukkitNativeProxyCommandSender;
+import dev.jorel.commandapi.commandsenders.BukkitPlayer;
+import dev.jorel.commandapi.commandsenders.BukkitProxiedCommandSender;
+import dev.jorel.commandapi.commandsenders.BukkitRemoteConsoleCommandSender;
 import dev.jorel.commandapi.nms.PaperNMS;
 import dev.jorel.commandapi.wrappers.NativeProxyCommandSender;
 import io.papermc.paper.event.server.ServerResourcesReloadedEvent;
 import org.bukkit.Bukkit;
-import org.bukkit.command.*;
+import org.bukkit.command.BlockCommandSender;
+import org.bukkit.command.CommandMap;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.ProxiedCommandSender;
+import org.bukkit.command.RemoteConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -26,7 +40,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public abstract class CommandAPIPaper<Source> implements BukkitPlatform<Source>, PaperNMS<Source> {
 
@@ -63,13 +76,31 @@ public abstract class CommandAPIPaper<Source> implements BukkitPlatform<Source>,
 		return (CommandAPIPaper<Source>) paper;
 	}
 
-	public static InternalBukkitConfig getConfiguration() {
-		return CommandAPIBukkit.getConfiguration();
+	public static InternalPaperConfig getConfiguration() {
+		return (InternalPaperConfig) CommandAPIBukkit.getConfiguration();
+	}
+
+	private static void setInternalConfig(InternalPaperConfig config) {
+		CommandAPIBukkit.config = config;
 	}
 
 	@Override
-	public void onLoad(CommandAPIConfig<?> config) {
-		bukkit.onLoad(config);
+	public <T extends CommandAPIBukkitConfig<T>> void onLoad(CommandAPIBukkitConfig<T> config) {
+		if (config instanceof CommandAPIPaperConfig paperConfig) {
+			// A little unconventional, but we really don't need to implement mojang mapping flags
+			// all over the place, we want it to have as minimal interaction as possible so it can
+			// be used by the test framework as a global static flag. Also, we want to set this
+			// as early as possible in the CommandAPI's loading sequence!
+			if (paperConfig.shouldUseMojangMappings) {
+				SafeVarHandle.USING_MOJANG_MAPPINGS = true;
+			}
+
+			CommandAPIPaper.setInternalConfig(new InternalPaperConfig(paperConfig));
+		} else {
+			CommandAPI.logError("CommandAPIBukkit was loaded with non-Bukkit config!");
+			CommandAPI.logError("Attempts to access Bukkit-specific config variables will fail!");
+		}
+		bukkit.onLoad();
 		checkPaperDependencies();
 	}
 
@@ -98,7 +129,7 @@ public abstract class CommandAPIPaper<Source> implements BukkitPlatform<Source>,
 			}
 		}, getConfiguration().getPlugin());
 
-		if (isPaperPresent && CommandAPIBukkit.getConfiguration().shouldHookPaperReload()) {
+		if (isPaperPresent && CommandAPIPaper.getConfiguration().shouldHookPaperReload()) {
 			Bukkit.getServer().getPluginManager().registerEvents(new Listener() {
 
 				@EventHandler

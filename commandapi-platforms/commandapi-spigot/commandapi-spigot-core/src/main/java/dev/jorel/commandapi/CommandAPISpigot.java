@@ -8,11 +8,25 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 import dev.jorel.commandapi.arguments.LiteralArgument;
 import dev.jorel.commandapi.arguments.MultiLiteralArgument;
 import dev.jorel.commandapi.arguments.SuggestionProviders;
-import dev.jorel.commandapi.commandsenders.*;
+import dev.jorel.commandapi.commandsenders.AbstractCommandSender;
+import dev.jorel.commandapi.commandsenders.AbstractPlayer;
+import dev.jorel.commandapi.commandsenders.BukkitBlockCommandSender;
+import dev.jorel.commandapi.commandsenders.BukkitCommandSender;
+import dev.jorel.commandapi.commandsenders.BukkitConsoleCommandSender;
+import dev.jorel.commandapi.commandsenders.BukkitEntity;
+import dev.jorel.commandapi.commandsenders.BukkitNativeProxyCommandSender;
+import dev.jorel.commandapi.commandsenders.BukkitPlayer;
+import dev.jorel.commandapi.commandsenders.BukkitProxiedCommandSender;
+import dev.jorel.commandapi.commandsenders.BukkitRemoteConsoleCommandSender;
 import dev.jorel.commandapi.nms.SpigotNMS;
 import dev.jorel.commandapi.wrappers.NativeProxyCommandSender;
 import org.bukkit.Bukkit;
-import org.bukkit.command.*;
+import org.bukkit.command.BlockCommandSender;
+import org.bukkit.command.CommandMap;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.ProxiedCommandSender;
+import org.bukkit.command.RemoteConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -47,13 +61,31 @@ public abstract class CommandAPISpigot<Source> implements BukkitPlatform<Source>
 		return (CommandAPISpigot<Source>) spigot;
 	}
 
-	public static InternalBukkitConfig getConfiguration() {
-		return CommandAPIBukkit.getConfiguration();
+	public static InternalSpigotConfig getConfiguration() {
+		return (InternalSpigotConfig) CommandAPIBukkit.getConfiguration();
+	}
+
+	private static void setInternalConfig(InternalSpigotConfig config) {
+		CommandAPIBukkit.config = config;
 	}
 
 	@Override
-	public void onLoad(CommandAPIConfig<?> config) {
-		bukkit.onLoad(config);
+	public <T extends CommandAPIBukkitConfig<T>> void onLoad(CommandAPIBukkitConfig<T> config) {
+		if (config instanceof CommandAPISpigotConfig spigotConfig) {
+			// A little unconventional, but we really don't need to implement mojang mapping flags
+			// all over the place, we want it to have as minimal interaction as possible so it can
+			// be used by the test framework as a global static flag. Also, we want to set this
+			// as early as possible in the CommandAPI's loading sequence!
+			if (spigotConfig.shouldUseMojangMappings) {
+				SafeVarHandle.USING_MOJANG_MAPPINGS = true;
+			}
+
+			CommandAPISpigot.setInternalConfig(new InternalSpigotConfig(spigotConfig));
+		} else {
+			CommandAPI.logError("CommandAPIBukkit was loaded with non-Bukkit config!");
+			CommandAPI.logError("Attempts to access Bukkit-specific config variables will fail!");
+		}
+		bukkit.onLoad();
 	}
 
 	@Override

@@ -55,7 +55,7 @@ public abstract class CommandAPIBukkit<Source> implements NMS<Source> {
 	// References to utility classes
 	private static BukkitPlatform<?> instance;
 	private static CommandAPIBukkit<?> bukkit;
-	private static InternalBukkitConfig config;
+	protected static InternalBukkitConfig config;
 
 	// Namespaces
 	private final Set<String> namespacesToFix = new HashSet<>();
@@ -108,27 +108,8 @@ public abstract class CommandAPIBukkit<Source> implements NMS<Source> {
 		throw new IllegalStateException("Tried to access InternalBukkitConfig, but it was null! Did you load the CommandAPI properly with CommandAPI#onLoad?");
 	}
 
-	public void onLoad(CommandAPIConfig<?> config) {
-		if (config instanceof CommandAPIBukkitConfig bukkitConfig) {
-			// A little unconventional, but we really don't need to implement mojang mapping flags
-			// all over the place, we want it to have as minimal interaction as possible so it can
-			// be used by the test framework as a global static flag. Also, we want to set this
-			// as early as possible in the CommandAPI's loading sequence!
-			if (bukkitConfig.shouldUseMojangMappings) {
-				SafeVarHandle.USING_MOJANG_MAPPINGS = true;
-			}
-
-			CommandAPIBukkit.setInternalConfig(new InternalBukkitConfig(bukkitConfig));
-		} else {
-			CommandAPI.logError("CommandAPIBukkit was loaded with non-Bukkit config!");
-			CommandAPI.logError("Attempts to access Bukkit-specific config variables will fail!");
-		}
-
+	public void onLoad() {
 		checkDependencies();
-	}
-
-	private static void setInternalConfig(InternalBukkitConfig internalBukkitConfig) {
-		CommandAPIBukkit.config = internalBukkitConfig;
 	}
 
 	private void checkDependencies() {
@@ -324,7 +305,7 @@ public abstract class CommandAPIBukkit<Source> implements NMS<Source> {
 	}
 
 	private void fixNamespaces() {
-		Map<String, Command> knownCommands = commandMapKnownCommands.get((SimpleCommandMap) paper.getCommandMap());
+		Map<String, Command> knownCommands = commandMapKnownCommands.get((SimpleCommandMap) instance.getCommandMap());
 		CommandDispatcher<Source> resourcesDispatcher = getResourcesDispatcher();
 		// Remove namespaces
 		for (String command : namespacesToFix) {
