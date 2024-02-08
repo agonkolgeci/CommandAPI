@@ -93,6 +93,8 @@ public abstract class CommandAPISpigot<Source> implements BukkitPlatform<Source>
 		JavaPlugin plugin = getConfiguration().getPlugin();
 
 		Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, () -> {
+			// Fix namespaces first thing when starting the server
+			bukkit.fixNamespaces();
 			// Sort out permissions after the server has finished registering them all
 			bukkit.fixPermissions();
 			reloadDataPacks();
@@ -197,8 +199,8 @@ public abstract class CommandAPISpigot<Source> implements BukkitPlatform<Source>
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public LiteralCommandNode<Source> registerCommandNode(LiteralArgumentBuilder<Source> node) {
-		return (LiteralCommandNode<Source>) getBukkit().registerCommandNode((LiteralArgumentBuilder<Object>) node);
+	public LiteralCommandNode<Source> registerCommandNode(LiteralArgumentBuilder<Source> node, String namespace) {
+		return (LiteralCommandNode<Source>) getBukkit().registerCommandNode((LiteralArgumentBuilder<Object>) node, namespace);
 	}
 
 	@Override

@@ -130,10 +130,6 @@ public abstract class CommandAPIBukkit<Source> implements NMS<Source> {
 		}
 	}
 
-	public void onEnable() {
-		fixNamespaces(); // TODO Move to platform specific thingy
-	}
-
 	/*
 	 * Makes permission checks more "Bukkit" like and less "Vanilla Minecraft" like
 	 */
@@ -304,7 +300,7 @@ public abstract class CommandAPIBukkit<Source> implements NMS<Source> {
 		getHelpMap().putAll(helpTopicsToAdd);
 	}
 
-	private void fixNamespaces() {
+	void fixNamespaces() {
 		Map<String, Command> knownCommands = commandMapKnownCommands.get((SimpleCommandMap) instance.getCommandMap());
 		CommandDispatcher<Source> resourcesDispatcher = getResourcesDispatcher();
 		// Remove namespaces
@@ -331,7 +327,6 @@ public abstract class CommandAPIBukkit<Source> implements NMS<Source> {
 		minecraftCommandNamespaces = new RootCommandNode<>();
 	}
 
-	@Override
 	public void onDisable() {
 		// Nothing to do
 	}
@@ -462,8 +457,7 @@ public abstract class CommandAPIBukkit<Source> implements NMS<Source> {
 		root.addChild(namespacedNode);
 	}
 
-	@Override
-	public LiteralCommandNode<Source> registerCommandNode(LiteralArgumentBuilder<Source> node, String namespace) {
+	LiteralCommandNode<Source> registerCommandNode(LiteralArgumentBuilder<Source> node, String namespace) {
 		RootCommandNode<Source> rootNode = getBrigadierDispatcher().getRoot();
 
 		LiteralCommandNode<Source> builtNode = node.build();
