@@ -544,7 +544,14 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 
 			// Do the same for the namespaced version of the command
 			String namespace = commonCommandInformation.namespace().toLowerCase();
-			if(!namespace.isEmpty()) permissionsToFix.putIfAbsent(namespace + ":" + commandName, permission);
+			permissionsToFix.putIfAbsent(namespace + ":" + commandName, permission);
+
+			// Do the same for the aliases
+			for (String alias : commonCommandInformation.aliases()) {
+				alias = alias.toLowerCase();
+				permissionsToFix.putIfAbsent(alias, permission);
+				permissionsToFix.putIfAbsent(namespace + ":" + alias, permission);
+			}
 		}
 	}
 
