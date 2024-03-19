@@ -3,8 +3,6 @@ package dev.jorel.commandapi;
 import io.papermc.paper.event.server.ServerResourcesReloadedEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.regex.Pattern;
-
 /**
  * A class that contains information needed to configure the CommandAPI on Bukkit-based servers.
  */
