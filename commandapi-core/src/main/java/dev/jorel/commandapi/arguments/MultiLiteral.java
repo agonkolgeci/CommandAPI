@@ -17,9 +17,9 @@ import java.util.function.Function;
  */
 public interface MultiLiteral<Argument
 /// @cond DOX
-extends AbstractArgument<?, ?, Argument, CommandSender>
+extends AbstractArgument<?, ?, Argument, ?>
 /// @endcond
-, CommandSender> {
+> {
 	// MultiLiteral specific information
 
 	/**

@@ -25,7 +25,6 @@ import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.CommandNode;
-import com.velocitypowered.api.command.CommandSource;
 import dev.jorel.commandapi.exceptions.BadLiteralException;
 import dev.jorel.commandapi.executors.CommandArguments;
 
@@ -35,7 +34,7 @@ import java.util.function.Function;
 /**
  * An argument that represents multiple LiteralArguments
  */
-public class MultiLiteralArgument extends Argument<String> implements MultiLiteral<Argument<?>, CommandSource> {
+public class MultiLiteralArgument extends Argument<String> implements MultiLiteral<Argument<?>> {
 
 	private final String[] literals;
 

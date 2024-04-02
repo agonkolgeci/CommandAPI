@@ -27,7 +27,6 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.CommandNode;
 import dev.jorel.commandapi.exceptions.BadLiteralException;
 import dev.jorel.commandapi.executors.CommandArguments;
-import org.bukkit.command.CommandSender;
 
 import java.util.List;
 import java.util.function.Function;
@@ -37,7 +36,7 @@ import java.util.function.Function;
  * 
  * @since 4.1
  */
-public class MultiLiteralArgument extends Argument<String> implements MultiLiteral<Argument<?>, CommandSender> {
+public class MultiLiteralArgument extends Argument<String> implements MultiLiteral<Argument<?>> {
 
 	private final String[] literals;
 

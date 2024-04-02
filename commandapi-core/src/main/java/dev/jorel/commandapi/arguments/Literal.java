@@ -11,9 +11,9 @@ import java.util.List;
  */
 public interface Literal<Argument
 /// @cond DOX
-extends AbstractArgument<?, ?, Argument, CommandSender>
+extends AbstractArgument<?, ?, Argument, ?>
 /// @endcond
-, CommandSender> {
+> {
 	// Literal specific information
 
 	/**

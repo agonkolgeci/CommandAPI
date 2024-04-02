@@ -25,7 +25,6 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.jorel.commandapi.exceptions.BadLiteralException;
 import dev.jorel.commandapi.executors.CommandArguments;
-import org.bukkit.command.CommandSender;
 
 import java.util.List;
 
@@ -34,7 +33,7 @@ import java.util.List;
  * 
  * @since 1.3
  */
-public class LiteralArgument extends Argument<String> implements Literal<Argument<?>, CommandSender> {
+public class LiteralArgument extends Argument<String> implements Literal<Argument<?>> {
 
 	private final String literal;
 

@@ -23,7 +23,6 @@ package dev.jorel.commandapi.arguments;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.velocitypowered.api.command.CommandSource;
 import dev.jorel.commandapi.exceptions.BadLiteralException;
 import dev.jorel.commandapi.executors.CommandArguments;
 
@@ -32,7 +31,7 @@ import java.util.List;
 /**
  * A pseudo-argument representing a single literal string
  */
-public class LiteralArgument extends Argument<String> implements Literal<Argument<?>, CommandSource> {
+public class LiteralArgument extends Argument<String> implements Literal<Argument<?>> {
 
 	private final String literal;
 

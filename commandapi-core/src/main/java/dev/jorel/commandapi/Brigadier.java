@@ -81,8 +81,8 @@ public final class Brigadier {
 	 * @param literalArgument the LiteralArgument to convert from
 	 * @return a LiteralArgumentBuilder that represents the literal
 	 */
-	public static <CommandSender, Argument extends AbstractArgument<?, ?, Argument, CommandSender>>
-	LiteralArgumentBuilder fromLiteralArgument(Literal<Argument, CommandSender> literalArgument) {
+	public static <Argument extends AbstractArgument<?, ?, Argument, ?>>
+	LiteralArgumentBuilder fromLiteralArgument(Literal<Argument> literalArgument) {
 		Argument argument = (Argument) literalArgument;
 		LiteralArgumentBuilder rootBuilder = (LiteralArgumentBuilder) argument.createArgumentBuilder(List.of(), List.of());
 		argument.finishBuildingNode(rootBuilder, List.of(), null);
