@@ -18,6 +18,7 @@ import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
 import com.mojang.brigadier.tree.CommandNode;
+import net.minecraft.server.v1_15_R1.MobEffectList;
 import org.bukkit.Axis;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -812,8 +813,12 @@ public class NMS_1_15 extends NMSWrapper_1_15 {
 	}
 
 	@Override
-	public PotionEffectType getPotionEffect(CommandContext<CommandListenerWrapper> cmdCtx, String key) throws CommandSyntaxException {
-		return new CraftPotionEffectType(ArgumentMobEffect.a(cmdCtx, key));
+	public Object getPotionEffect(CommandContext<CommandListenerWrapper> cmdCtx, String key, ArgumentSubType subType) throws CommandSyntaxException {
+		return switch (subType) {
+			case POTION_EFFECT_POTION_EFFECT -> new CraftPotionEffectType(ArgumentMobEffect.a(cmdCtx, key));
+			case POTION_EFFECT_NAMESPACEDKEY -> fromMinecraftKey(ArgumentMinecraftKeyRegistered.d(cmdCtx, key));
+			default -> throw new IllegalArgumentException("Unexpected value: " + subType);
+		};
 	}
 
 	@Differs(from = "1.14.4", by = "Implementation of ComplexRecipe instead of Recipe")
@@ -909,6 +914,7 @@ public class NMS_1_15 extends NMSWrapper_1_15 {
 			case ADVANCEMENTS -> (cmdCtx, builder) -> ICompletionProvider.a(this.<MinecraftServer>getMinecraftServer().getAdvancementData().getAdvancements().stream().map(Advancement::getName), builder);
 			case LOOT_TABLES -> (cmdCtx, builder) -> ICompletionProvider.a(this.<MinecraftServer>getMinecraftServer().getLootTableRegistry().a(), builder);
 			case ENTITIES -> CompletionProviders.d;
+			case POTION_EFFECTS -> (context, builder) -> ICompletionProvider.a(IRegistry.MOB_EFFECT.keySet(), builder);
 			default -> (context, builder) -> Suggestions.empty();
 		};
 	}
